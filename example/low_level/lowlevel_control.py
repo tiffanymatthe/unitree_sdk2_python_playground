@@ -1,6 +1,6 @@
 import time
 import sys
-
+import math
 from unitree_sdk2py.core.channel import ChannelPublisher, ChannelFactoryInitialize
 from unitree_sdk2py.core.channel import ChannelSubscriber, ChannelFactoryInitialize
 from unitree_sdk2py.idl.default import unitree_go_msg_dds__LowCmd_
@@ -34,20 +34,32 @@ if __name__ == '__main__':
         cmd.motor_cmd[i].kd = 0
         cmd.motor_cmd[i].tau = 0
 
+    freq = 1/8
+    amplitude = math.radians(15)
+
     while True:        
         # Toque controle, set RL_2 toque
-        cmd.motor_cmd[go2.LegID["RL_2"]].q = 0.0 # Set to stop position(rad)
-        cmd.motor_cmd[go2.LegID["RL_2"]].kp = 0.0
-        cmd.motor_cmd[go2.LegID["RL_2"]].dq = 0.0 # Set to stop angular velocity(rad/s)
-        cmd.motor_cmd[go2.LegID["RL_2"]].kd = 0.0
-        cmd.motor_cmd[go2.LegID["RL_2"]].tau = 1.0 # target toque is set to 1N.m
+        # cmd.motor_cmd[go2.LegID["RL_2"]].mode = 0x01  # (PMSM) mode
+        # cmd.motor_cmd[go2.LegID["RL_2"]].q = 0.0 # Set to stop position(rad)
+        # cmd.motor_cmd[go2.LegID["RL_2"]].kp = 0.0
+        # cmd.motor_cmd[go2.LegID["RL_2"]].dq = 0.0 # Set to stop angular velocity(rad/s)
+        # cmd.motor_cmd[go2.LegID["RL_2"]].kd = 0.0
+        # cmd.motor_cmd[go2.LegID["RL_2"]].tau = 1.0 # target toque is set to 1N.m
 
-        # Poinstion(rad) control, set RL_0 rad
-        cmd.motor_cmd[go2.LegID["RL_0"]].q = 0.0  # Taregt angular(rad)
-        cmd.motor_cmd[go2.LegID["RL_0"]].kp = 10.0 # Poinstion(rad) control kp gain
-        cmd.motor_cmd[go2.LegID["RL_0"]].dq = 0.0  # Taregt angular velocity(rad/ss)
-        cmd.motor_cmd[go2.LegID["RL_0"]].kd = 1.0  # Poinstion(rad) control kd gain
-        cmd.motor_cmd[go2.LegID["RL_0"]].tau = 0.0 # Feedforward toque 1N.m
+        current_time = time.time()
+        sinusoidal_q = amplitude * math.sin(2 * math.pi * freq * current_time)
+
+        # # Poinstion(rad) control, set RL_0 rad
+        for name in ["RL_0", "RR_0", "FL_0", "FR_0"]:
+            cmd.motor_cmd[go2.LegID[name]].mode = 0x01
+            if name == "RL_0":
+                cmd.motor_cmd[go2.LegID[name]].q = sinusoidal_q  # Taregt angular(rad)
+            else:
+                cmd.motor_cmd[go2.LegID[name]].q = 0  # Taregt angular(rad)
+            cmd.motor_cmd[go2.LegID[name]].kp = 10.0 # Poinstion(rad) control kp gain
+            cmd.motor_cmd[go2.LegID[name]].dq = 0.0  # Taregt angular velocity(rad/ss)
+            cmd.motor_cmd[go2.LegID[name]].kd = 1.0  # Poinstion(rad) control kd gain
+            cmd.motor_cmd[go2.LegID[name]].tau = 0.0 # Feedforward toque 1N.m
         
         cmd.crc = crc.Crc(cmd)
 
